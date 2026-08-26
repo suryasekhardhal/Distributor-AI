@@ -1,64 +1,115 @@
 import { Product } from "../models/product.model.js";
 
-function normalizeProductName(name) {
-    return name
-        .trim()
+function normalize(value) {
+    return String(value || "")
         .toLowerCase()
-        .replace(/[-_]/g, " ")
-        .replace(/\s+/g, " ");
+        .replace(/[^a-z0-9]/g, "");
 }
 
-export async function matchProduct({
+export async function findProduct({
     companyId,
     productName,
+    sku,
 }) {
     if (!companyId) {
         throw new Error("companyId is required");
     }
 
-    if (!productName) {
-        throw new Error("Product name is required");
+    if (!productName && !sku) {
+        return {
+            status: "not_found",
+        };
     }
 
-    const normalizedName = normalizeProductName(productName);
+    // -----------------------------------------
+    // 1. SKU MATCH
+    // -----------------------------------------
+
+    if (sku) {
+        const productBySku = await Product.findOne({
+            companyId,
+            sku,
+            isActive: true,
+        });
+
+        if (productBySku) {
+            return {
+                status: "found",
+                product: productBySku,
+            };
+        }
+    }
+
+    // -----------------------------------------
+    // 2. EXACT NAME MATCH
+    // -----------------------------------------
+
+    if (productName) {
+        const exact = await Product.findOne({
+            companyId,
+            name: productName,
+            isActive: true,
+        });
+
+        if (exact) {
+            return {
+                status: "found",
+                product: exact,
+            };
+        }
+    }
+
+    // -----------------------------------------
+    // 3. FETCH COMPANY PRODUCTS
+    // -----------------------------------------
 
     const products = await Product.find({
         companyId,
         isActive: true,
-    });
+    }).lean();
 
-    const exactMatches = products.filter(
+    const normalizedSearch = normalize(productName);
+
+    // -----------------------------------------
+    // 4. NORMALIZED MATCH
+    // -----------------------------------------
+
+    const normalizedMatch = products.find(
         (product) =>
-            normalizeProductName(product.name) ===
-            normalizedName
+            normalize(product.name) ===
+            normalizedSearch
     );
 
-    if (exactMatches.length === 1) {
+    if (normalizedMatch) {
         return {
-            status: "matched",
-            product: exactMatches[0],
+            status: "found",
+            product: normalizedMatch,
         };
     }
 
-    if (exactMatches.length > 1) {
-        return {
-            status: "ambiguous",
-            products: exactMatches,
-        };
-    }
+    // -----------------------------------------
+    // 5. PARTIAL MATCH
+    // -----------------------------------------
 
-    const partialMatches = products.filter((product) => {
-        const name = normalizeProductName(product.name);
+    const partialMatches = products.filter(
+        (product) => {
+            const normalizedName =
+                normalize(product.name);
 
-        return (
-            name.includes(normalizedName) ||
-            normalizedName.includes(name)
-        );
-    });
+            return (
+                normalizedName.includes(
+                    normalizedSearch
+                ) ||
+                normalizedSearch.includes(
+                    normalizedName
+                )
+            );
+        }
+    );
 
     if (partialMatches.length === 1) {
         return {
-            status: "matched",
+            status: "found",
             product: partialMatches[0],
         };
     }
@@ -72,6 +123,5 @@ export async function matchProduct({
 
     return {
         status: "not_found",
-        products: [],
     };
 }

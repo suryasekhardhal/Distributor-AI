@@ -1,11 +1,11 @@
 import { Product } from "../models/product.model.js";
 
 import {
-    findCustomerByPhone,
+    findCustomer as findCustomerByPhone,
 } from "./customerMatching.service.js";
 
 import {
-    matchProduct,
+  findProduct as  matchProduct,
 } from "./productMatching.service.js";
 
 import {
@@ -40,7 +40,7 @@ export async function buildOrderPreview({
     const customer =
         await findCustomerByPhone({
             companyId,
-            phone: customerPhone,
+            customerPhone,
         });
 
     if (!customer) {
@@ -62,6 +62,7 @@ export async function buildOrderPreview({
             await matchProduct({
                 companyId,
                 productName: item.productName,
+                sku: item.sku,
             });
 
         if (

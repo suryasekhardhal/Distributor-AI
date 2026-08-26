@@ -11,13 +11,20 @@
     "test:matching": "node src/seed/testMatching.js",
     "test:inventory": "node src/seed/testInventory.js",
     "test:preview": "node src/seed/testOrderPreview.js",
-    "test:order": "node src/seed/testOrderCreation.js"
+    "test:order": "node src/seed/testOrderCreation.js",
+    "test:payment": "node src/seed/testPayment.js",
+    "test:confirmation": "node src/seed/testOrderConfirmation.js",
+    "test:ai-command": "node src/seed/testAICommand.js",
+    "test:gemini": "node src/seed/testGemini.js",
+    "test:whatsapp-confirmation": "node src/seed/testWhatsAppConfirmation.js",
+    "test:whatsapp": "node src/seed/testWhatsAppSender.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@google/genai": "^2.19.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

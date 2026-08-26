@@ -19,4 +19,10 @@ app.get("/api/v1/health", (req, res) => {
     });
 });
 
+import whatsappRoutes from "./routes/whatsapp.routes.js";
+app.use(
+    "/api/v1/whatsapp",
+    whatsappRoutes
+);
+
 export default app;

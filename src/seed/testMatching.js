@@ -4,8 +4,8 @@ import mongoose from "mongoose";
 import { Company } from "../models/company.model.js";
 import { Customer } from "../models/customer.model.js";
 
-import { findCustomerByPhone } from "../services/customerMatching.service.js";
-import { matchProduct } from "../services/productMatching.service.js";
+import {findCustomer as findCustomerByPhone } from "../services/customerMatching.service.js";
+import {findProduct as matchProduct } from "../services/productMatching.service.js";
 import {DB_NAME} from "../constants.js"
 
 dotenv.config();
@@ -40,37 +40,37 @@ async function testMatching() {
         // PRODUCT TEST
         // -----------------------------
 
-        const product = await matchProduct({
-            companyId: company._id,
-            productName: "Parle-G",
-        });
+        const productResult = await matchProduct({
+    companyId: company._id,
+    productName: "Parle-G",
+});
 
-        console.log("\nPRODUCT MATCH:");
-        console.log(product);
+console.log("\nPRODUCT MATCH:");
+console.dir(productResult, { depth: null });
 
         // -----------------------------
         // PRODUCT PARTIAL MATCH TEST
         // -----------------------------
 
-        const partialProduct = await matchProduct({
-            companyId: company._id,
-            productName: "Parle G",
-        });
+        const partialProductResult = await matchProduct({
+    companyId: company._id,
+    productName: "Parle G",
+});
 
-        console.log("\nPARTIAL PRODUCT MATCH:");
-        console.log(partialProduct);
+console.log("\nPARTIAL PRODUCT MATCH:");
+console.dir(partialProductResult, { depth: null });
 
         // -----------------------------
         // PRODUCT NOT FOUND TEST
         // -----------------------------
 
-        const missingProduct = await matchProduct({
-            companyId: company._id,
-            productName: "Lays",
-        });
+        const missingProductResult = await matchProduct({
+    companyId: company._id,
+    productName: "Lays",
+});
 
-        console.log("\nMISSING PRODUCT:");
-        console.log(missingProduct);
+console.log("\nMISSING PRODUCT:");
+console.dir(missingProductResult, { depth: null });
 
     } catch (error) {
         console.error(

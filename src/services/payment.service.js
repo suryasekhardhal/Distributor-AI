@@ -42,6 +42,20 @@ export async function recordPayment({
         );
     }
 
+    const existingPayment =
+    await Payment.findOne({
+        companyId,
+        gateway,
+        gatewayPaymentId,
+    }).lean();
+
+if (existingPayment) {
+    return {
+        duplicate: true,
+        payment: existingPayment,
+    };
+}
+
     const session =
         await mongoose.startSession();
 
