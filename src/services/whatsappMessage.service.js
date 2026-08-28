@@ -75,3 +75,41 @@ export function buildOrderConfirmationMessage({
         },
     };
 }
+
+export function buildPaymentMethodMessage() {
+    return {
+        type: "interactive",
+        interactive: {
+            type: "button",
+            body: {
+                text:
+                    "💳 Choose your payment method:"
+            },
+            action: {
+                buttons: [
+                    {
+                        type: "reply",
+                        reply: {
+                            id: "payment:cod",
+                            title: "Cash on Delivery"
+                        }
+                    },
+                    {
+                        type: "reply",
+                        reply: {
+                            id: "payment:upi",
+                            title: "UPI"
+                        }
+                    },
+                    {
+                        type: "reply",
+                        reply: {
+                            id: "payment:online",
+                            title: "Online Payment"
+                        }
+                    }
+                ]
+            }
+        }
+    };
+}

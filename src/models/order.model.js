@@ -56,6 +56,15 @@ const orderSchema = new Schema(
             default: 0,
             min: 0,
         },
+        paymentMethod: {
+    type: String,
+    enum: [
+        "cod",
+        "upi",
+        "online",
+    ],
+    default: null,
+},
 
         paymentStatus: {
             type: String,

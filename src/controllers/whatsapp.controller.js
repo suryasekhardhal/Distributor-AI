@@ -4,9 +4,10 @@ import { handleWhatsAppAction } from "../services/whatsappAction.service.js";
 
 import { sendWhatsAppMessage } from "../services/whatsappApi.service.js";
 
-import {
-  buildTextMessage,
-} from "../services/whatsappMessage.service.js";
+import { buildTextMessage,buildPaymentMethodMessage } from "../services/whatsappMessage.service.js";
+
+import { Conversation } from "../models/conversation.model.js";
+import { Order } from "../models/order.model.js";
 
 export async function verifyWhatsAppWebhook(req, res) {
   const mode = req.query["hub.mode"];
@@ -16,28 +17,16 @@ export async function verifyWhatsAppWebhook(req, res) {
   console.log("\n========== WHATSAPP VERIFICATION ==========");
   console.log("Mode:", mode);
   console.log("Token received:", token);
-  console.log(
-    "Token configured:",
-    !!process.env.WHATSAPP_VERIFY_TOKEN
-  );
+  console.log("Token configured:", !!process.env.WHATSAPP_VERIFY_TOKEN);
   console.log(
     "Configured token length:",
-    process.env.WHATSAPP_VERIFY_TOKEN?.length
+    process.env.WHATSAPP_VERIFY_TOKEN?.length,
   );
-  console.log(
-    "Received token length:",
-    token?.length
-  );
-  console.log(
-    "Token matches:",
-    token === process.env.WHATSAPP_VERIFY_TOKEN
-  );
+  console.log("Received token length:", token?.length);
+  console.log("Token matches:", token === process.env.WHATSAPP_VERIFY_TOKEN);
   console.log("Challenge:", challenge);
 
-  if (
-    mode === "subscribe" &&
-    token === process.env.WHATSAPP_VERIFY_TOKEN
-  ) {
+  if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
     return res.status(200).send(challenge);
   }
 
@@ -47,11 +36,11 @@ export async function verifyWhatsAppWebhook(req, res) {
 }
 
 export async function receiveWhatsAppMessage(req, res) {
-      console.log("\n🔥 POST WEBHOOK HIT 🔥");
+  console.log("\n🔥 POST WEBHOOK HIT 🔥");
 
-    console.log("METHOD:", req.method);
-    console.log("URL:", req.originalUrl);
-    console.log("HEADERS:", req.headers);
+  console.log("METHOD:", req.method);
+  console.log("URL:", req.originalUrl);
+  console.log("HEADERS:", req.headers);
   try {
     const body = req.body;
 
@@ -112,6 +101,76 @@ export async function receiveWhatsAppMessage(req, res) {
        */
 
       const companyId = process.env.WHATSAPP_COMPANY_ID;
+
+      const conversation = await Conversation.findOne({
+        companyId,
+        customerPhone,
+      });
+
+      // -----------------------------------------
+      // DELIVERY ADDRESS
+      // -----------------------------------------
+
+      if (conversation?.state === "awaiting_address") {
+        const address = text.trim();
+
+        if (!address) {
+          await sendWhatsAppMessage({
+            to: customerPhone,
+            message: buildTextMessage({
+              text: "📍 Please send a valid delivery address.",
+            }),
+          });
+
+          return;
+        }
+
+        const orderId = conversation.pendingOrderId;
+
+        if (!orderId) {
+          await sendWhatsAppMessage({
+            to: customerPhone,
+            message: buildTextMessage({
+              text: "I couldn't find your pending order. Please place the order again.",
+            }),
+          });
+
+          return;
+        }
+
+const targetOrder = await Order.findOne({
+    _id: orderId,
+    companyId,
+});
+
+if (!targetOrder) {
+    await sendWhatsAppMessage({
+        to: customerPhone,
+        message: buildTextMessage({
+            text: "I couldn't find your confirmed order.",
+        }),
+    });
+
+    return;
+};
+
+        targetOrder.deliveryAddress = address;
+
+        await targetOrder.save();
+
+        // Move conversation to payment step
+        conversation.state = "awaiting_payment";
+        conversation.deliveryAddress = address;
+
+        await conversation.save();
+
+        await sendWhatsAppMessage({
+    to: customerPhone,
+    message: buildPaymentMethodMessage(),
+});
+
+        return;
+      }
 
       const result = await processDistributorMessage({
         companyId,
