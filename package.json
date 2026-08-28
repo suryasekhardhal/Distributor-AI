@@ -17,7 +17,8 @@
     "test:ai-command": "node src/seed/testAICommand.js",
     "test:gemini": "node src/seed/testGemini.js",
     "test:whatsapp-confirmation": "node src/seed/testWhatsAppConfirmation.js",
-    "test:whatsapp": "node src/seed/testWhatsAppSender.js"
+    "test:whatsapp": "node src/seed/testWhatsAppSender.js",
+    "test:whatsapp-webhook": "node src/seed/testWhatsAppWebhook.js"
   },
   "keywords": [],
   "author": "",

@@ -11,6 +11,7 @@ import { savePendingConfirmation } from "./conversation.service.js";
 export async function processDistributorMessage({
     companyId,
     customerPhone,
+    customerName,
     message,
 }) {
     if (!companyId) {
@@ -43,7 +44,7 @@ export async function processDistributorMessage({
 
     command.customerPhone =
         customerPhone;
-
+command.customerName = customerName;
     const result =
         await executeAICommand({
             companyId,

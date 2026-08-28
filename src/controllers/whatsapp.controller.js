@@ -5,18 +5,39 @@ import { handleWhatsAppAction } from "../services/whatsappAction.service.js";
 import { sendWhatsAppMessage } from "../services/whatsappApi.service.js";
 
 import {
-  buildOrderConfirmationMessage,
   buildTextMessage,
 } from "../services/whatsappMessage.service.js";
 
 export async function verifyWhatsAppWebhook(req, res) {
   const mode = req.query["hub.mode"];
-
   const token = req.query["hub.verify_token"];
-
   const challenge = req.query["hub.challenge"];
 
-  if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+  console.log("\n========== WHATSAPP VERIFICATION ==========");
+  console.log("Mode:", mode);
+  console.log("Token received:", token);
+  console.log(
+    "Token configured:",
+    !!process.env.WHATSAPP_VERIFY_TOKEN
+  );
+  console.log(
+    "Configured token length:",
+    process.env.WHATSAPP_VERIFY_TOKEN?.length
+  );
+  console.log(
+    "Received token length:",
+    token?.length
+  );
+  console.log(
+    "Token matches:",
+    token === process.env.WHATSAPP_VERIFY_TOKEN
+  );
+  console.log("Challenge:", challenge);
+
+  if (
+    mode === "subscribe" &&
+    token === process.env.WHATSAPP_VERIFY_TOKEN
+  ) {
     return res.status(200).send(challenge);
   }
 
@@ -26,6 +47,11 @@ export async function verifyWhatsAppWebhook(req, res) {
 }
 
 export async function receiveWhatsAppMessage(req, res) {
+      console.log("\n🔥 POST WEBHOOK HIT 🔥");
+
+    console.log("METHOD:", req.method);
+    console.log("URL:", req.originalUrl);
+    console.log("HEADERS:", req.headers);
   try {
     const body = req.body;
 
@@ -61,6 +87,7 @@ export async function receiveWhatsAppMessage(req, res) {
     }
 
     const customerPhone = message.from;
+    const customerName = value?.contacts?.[0]?.profile?.name || "";
 
     // -----------------------------------------
     // TEXT MESSAGE
@@ -89,6 +116,7 @@ export async function receiveWhatsAppMessage(req, res) {
       const result = await processDistributorMessage({
         companyId,
         customerPhone,
+        customerName,
         message: text,
       });
 

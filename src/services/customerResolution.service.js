@@ -1,75 +1,7 @@
 import { Customer } from "../models/customer.model.js";
+import { findCustomer } from "./customer.service.js";
 
-function normalize(value) {
-    return String(value || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "");
-}
-
-export async function findCustomer({
-    companyId,
-    customerPhone,
-    customerName,
-}) {
-    if (!companyId) {
-        throw new Error(
-            "companyId is required"
-        );
-    }
-
-    // -----------------------------------------
-    // 1. PHONE IS AUTHORITATIVE
-    // -----------------------------------------
-
-    if (customerPhone) {
-        const customer =
-            await Customer.findOne({
-                companyId,
-                phone: customerPhone,
-                isActive: true,
-            });
-
-        if (customer) {
-            return customer;
-        }
-    }
-
-    // -----------------------------------------
-    // 2. NAME MATCH
-    // -----------------------------------------
-
-    if (!customerName) {
-        return null;
-    }
-
-    const customers =
-        await Customer.find({
-            companyId,
-            isActive: true,
-        }).lean();
-
-    const search =
-        normalize(customerName);
-
-    const matches =
-        customers.filter(
-            (customer) =>
-                normalize(customer.name)
-                    .includes(search) ||
-                search.includes(
-                    normalize(customer.name)
-                )
-        );
-
-    if (matches.length === 1) {
-        return matches[0];
-    }
-
-    return null;
-}
-
-
-export async function findOrCreateCustomer({
+export async function resolveOrCreateCustomer({
     companyId,
     customerPhone,
     customerName,
@@ -83,7 +15,7 @@ export async function findOrCreateCustomer({
     }
 
     // -----------------------------------------
-    // NORMALIZE PHONE
+    // 1. Normalize phone
     // -----------------------------------------
 
     const phone = String(customerPhone)
@@ -94,7 +26,7 @@ export async function findOrCreateCustomer({
     }
 
     // -----------------------------------------
-    // 1. FIND EXISTING CUSTOMER
+    // 2. Try existing customer
     // -----------------------------------------
 
     const existingCustomer = await findCustomer({
@@ -111,11 +43,11 @@ export async function findOrCreateCustomer({
     }
 
     // -----------------------------------------
-    // 2. CREATE NEW CUSTOMER
+    // 3. Create new customer
     // -----------------------------------------
 
     const name =
-        String(customerName || "").trim() ||
+        customerName?.trim() ||
         `WhatsApp Customer ${phone.slice(-4)}`;
 
     try {
@@ -126,9 +58,7 @@ export async function findOrCreateCustomer({
             isActive: true,
         });
 
-        console.log(
-            "\n========== NEW WHATSAPP CUSTOMER CREATED =========="
-        );
+        console.log("\n========== NEW CUSTOMER CREATED ==========");
 
         console.dir(customer, {
             depth: null,
@@ -141,7 +71,7 @@ export async function findOrCreateCustomer({
     } catch (error) {
 
         // -----------------------------------------
-        // DUPLICATE PHONE PROTECTION
+        // Race condition protection
         // -----------------------------------------
 
         if (error?.code === 11000) {

@@ -1,7 +1,6 @@
-import { Product } from "../models/product.model.js";
-
 import {
-    findCustomer as findCustomerByPhone,
+   
+    findOrCreateCustomer
 } from "./customerMatching.service.js";
 
 import {
@@ -15,6 +14,7 @@ import {
 export async function buildOrderPreview({
     companyId,
     customerPhone,
+    customerName,
     items,
 }) {
     if (!companyId) {
@@ -37,11 +37,15 @@ export async function buildOrderPreview({
     // CUSTOMER
     // -----------------------------------------
 
-    const customer =
-        await findCustomerByPhone({
-            companyId,
-            customerPhone,
-        });
+    const customerResult =
+    await findOrCreateCustomer({
+        companyId,
+        customerPhone,
+        customerName,
+    });
+
+const customer =
+    customerResult.customer;
 
     if (!customer) {
         return {
