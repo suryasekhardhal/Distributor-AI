@@ -1,232 +1,79 @@
-// import "dotenv/config";
-// const WHATSAPP_API_VERSION =
-//     process.env.WHATSAPP_API_VERSION || "v23.0";
+const WHATSAPP_MODE = process.env.WHATSAPP_MODE || "meta";
 
-// const WHATSAPP_PHONE_NUMBER_ID =
-//     process.env.WHATSAPP_PHONE_NUMBER_ID;
+const WHATSAPP_API_VERSION = process.env.WHATSAPP_API_VERSION || "v23.0";
 
-// const WHATSAPP_ACCESS_TOKEN =
-//     process.env.WHATSAPP_ACCESS_TOKEN;
+const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
-// function getMessagesUrl() {
-//     if (!WHATSAPP_PHONE_NUMBER_ID) {
-//         throw new Error(
-//             "WHATSAPP_PHONE_NUMBER_ID is missing"
-//         );
-//     }
-
-//     return `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-// }
-
-// function getHeaders() {
-//     if (!WHATSAPP_ACCESS_TOKEN) {
-//         throw new Error(
-//             "WHATSAPP_ACCESS_TOKEN is missing"
-//         );
-//     }
-
-//     return {
-//         Authorization:
-//             `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-
-//         "Content-Type":
-//             "application/json",
-//     };
-// }
-
-// export async function sendWhatsAppMessage({
-//     to,
-//     message,
-// }) {
-//     if (!to) {
-//         throw new Error(
-//             "WhatsApp recipient is required"
-//         );
-//     }
-
-//     if (!message) {
-//         throw new Error(
-//             "WhatsApp message is required"
-//         );
-//     }
-
-//     const response =
-//         await fetch(
-//             getMessagesUrl(),
-//             {
-//                 method: "POST",
-
-//                 headers:
-//                     getHeaders(),
-
-//                 body: JSON.stringify({
-//                     messaging_product:
-//                         "whatsapp",
-
-//                     recipient_type:
-//                         "individual",
-
-//                     to,
-
-//                     ...message,
-//                 }),
-//             }
-//         );
-
-//     const data =
-//         await response.json();
-
-//     if (!response.ok) {
-//         console.error(
-//             "WhatsApp API error:",
-//             data
-//         );
-
-//         throw new Error(
-//             data?.error?.message ||
-//                 "Failed to send WhatsApp message"
-//         );
-//     }
-
-//     return data;
-// }
-
-
-const WHATSAPP_MODE =
-    process.env.WHATSAPP_MODE || "meta";
-
-const WHATSAPP_API_VERSION =
-    process.env.WHATSAPP_API_VERSION || "v23.0";
-
-const WHATSAPP_PHONE_NUMBER_ID =
-    process.env.WHATSAPP_PHONE_NUMBER_ID;
-
-const WHATSAPP_ACCESS_TOKEN =
-    process.env.WHATSAPP_ACCESS_TOKEN;
-
+const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 
 function getMessagesUrl() {
+  if (!WHATSAPP_PHONE_NUMBER_ID) {
+    throw new Error("WHATSAPP_PHONE_NUMBER_ID is missing");
+  }
 
-    if (!WHATSAPP_PHONE_NUMBER_ID) {
-        throw new Error(
-            "WHATSAPP_PHONE_NUMBER_ID is missing"
-        );
-    }
-
-    return `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  return `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
 }
-
 
 function getHeaders() {
+  if (!WHATSAPP_ACCESS_TOKEN) {
+    throw new Error("WHATSAPP_ACCESS_TOKEN is missing");
+  }
 
-    if (!WHATSAPP_ACCESS_TOKEN) {
-        throw new Error(
-            "WHATSAPP_ACCESS_TOKEN is missing"
-        );
-    }
+  return {
+    Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
 
-    return {
-        Authorization:
-            `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-
-        "Content-Type":
-            "application/json",
-    };
+    "Content-Type": "application/json",
+  };
 }
 
+export async function sendWhatsAppMessage({ to, message }) {
+  if (!to) {
+    throw new Error("WhatsApp recipient is required");
+  }
 
-export async function sendWhatsAppMessage({
-    to,
-    message,
-}) {
+  if (!message) {
+    throw new Error("WhatsApp message is required");
+  }
 
-    if (!to) {
-        throw new Error(
-            "WhatsApp recipient is required"
-        );
-    }
+  if (WHATSAPP_MODE === "simulator") {
+    console.log("\n========== SIMULATED WHATSAPP RESPONSE ==========");
 
-    if (!message) {
-        throw new Error(
-            "WhatsApp message is required"
-        );
-    }
+    console.log("TO:", to);
 
+    console.dir(message, { depth: null });
 
-    // -----------------------------------------
-    // SIMULATOR MODE
-    // -----------------------------------------
+    console.log("=================================================\n");
 
-    if (WHATSAPP_MODE === "simulator") {
+    return {
+      simulated: true,
+      to,
+      message,
+    };
+  }
 
-        console.log(
-            "\n========== SIMULATED WHATSAPP RESPONSE =========="
-        );
+  const response = await fetch(getMessagesUrl(), {
+    method: "POST",
 
-        console.log("TO:", to);
+    headers: getHeaders(),
 
-        console.dir(
-            message,
-            { depth: null }
-        );
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
 
-        console.log(
-            "=================================================\n"
-        );
+      recipient_type: "individual",
 
-        return {
-            simulated: true,
-            to,
-            message,
-        };
-    }
+      to,
 
+      ...message,
+    }),
+  });
 
-    // -----------------------------------------
-    // META MODE
-    // -----------------------------------------
+  const data = await response.json();
 
-    const response =
-        await fetch(
-            getMessagesUrl(),
-            {
-                method: "POST",
+  if (!response.ok) {
+    console.error("WhatsApp API error:", data);
 
-                headers:
-                    getHeaders(),
+    throw new Error(data?.error?.message || "Failed to send WhatsApp message");
+  }
 
-                body: JSON.stringify({
-                    messaging_product:
-                        "whatsapp",
-
-                    recipient_type:
-                        "individual",
-
-                    to,
-
-                    ...message,
-                }),
-            }
-        );
-
-
-    const data =
-        await response.json();
-
-
-    if (!response.ok) {
-
-        console.error(
-            "WhatsApp API error:",
-            data
-        );
-
-        throw new Error(
-            data?.error?.message ||
-            "Failed to send WhatsApp message"
-        );
-    }
-
-
-    return data;
+  return data;
 }

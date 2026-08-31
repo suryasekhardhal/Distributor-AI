@@ -50,7 +50,7 @@ export async function executeAICommand({ companyId, command }) {
         companyId,
 
         customerPhone: command.customerPhone,
-         customerName: command.customerName,
+        customerName: command.customerName,
 
         items: command.items,
       });

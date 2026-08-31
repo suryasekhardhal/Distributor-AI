@@ -1,126 +1,3 @@
-// import {
-//     getPendingConfirmation,
-//     clearConversation,
-// } from "./conversation.service.js";
-
-// import {
-//     executeAICommand,
-// } from "./aiCommandExecutor.service.js";
-
-// export async function handleWhatsAppAction({
-//     companyId,
-//     customerPhone,
-//     actionId,
-// }) {
-//     if (!companyId) {
-//         throw new Error(
-//             "companyId is required"
-//         );
-//     }
-
-//     if (!customerPhone) {
-//         throw new Error(
-//             "customerPhone is required"
-//         );
-//     }
-
-//     if (!actionId) {
-//         throw new Error(
-//             "actionId is required"
-//         );
-//     }
-
-//     const [action, confirmationId] =
-//         actionId.split(":");
-
-//     if (
-//         !action ||
-//         !confirmationId
-//     ) {
-//         return {
-//             status: "invalid_action",
-//             message:
-//                 "Invalid WhatsApp action.",
-//         };
-//     }
-
-//     const conversation =
-//         await getPendingConfirmation({
-//             companyId,
-//             customerPhone,
-//             confirmationId,
-//         });
-
-//     if (!conversation) {
-//         return {
-//             status:
-//                 "confirmation_expired",
-
-//             message:
-//                 "This order confirmation has expired or is no longer valid.",
-//         };
-//     }
-
-//     // -----------------------------------------
-//     // CANCEL
-//     // -----------------------------------------
-
-//     if (
-//         action ===
-//         "cancel_order"
-//     ) {
-//         await clearConversation({
-//             companyId,
-//             customerPhone,
-//         });
-
-//         return {
-//             status: "cancelled",
-
-//             message:
-//                 "Order cancelled.",
-//         };
-//     }
-
-//     // -----------------------------------------
-//     // CONFIRM
-//     // -----------------------------------------
-
-//     if (
-//         action ===
-//         "confirm_order"
-//     ) {
-//         const command = {
-//             ...conversation.pendingCommand,
-
-//             intent:
-//                 "confirm_order",
-
-//             customerPhone,
-//         };
-
-//         const result =
-//             await executeAICommand({
-//                 companyId,
-//                 command,
-//             });
-
-//         await clearConversation({
-//             companyId,
-//             customerPhone,
-//         });
-
-//         return result;
-//     }
-
-//     return {
-//         status: "invalid_action",
-
-//         message:
-//             "Unsupported WhatsApp action.",
-//     };
-// }
-
 import {
   getPendingConfirmation,
   clearConversation,
@@ -148,10 +25,6 @@ export async function handleWhatsAppAction({
   if (!actionId) {
     throw new Error("actionId is required");
   }
-
-  // -----------------------------------------
-  // PAYMENT ACTION
-  // -----------------------------------------
 
   if (actionId.startsWith("payment:")) {
     const paymentMethod = actionId.split(":")[1];
@@ -209,8 +82,6 @@ export async function handleWhatsAppAction({
 
     await order.save();
 
-    await order.save();
-
     conversation.paymentMethod = paymentMethod;
     conversation.state = "idle";
     conversation.expiresAt = null;
@@ -232,10 +103,6 @@ export async function handleWhatsAppAction({
     };
   }
 
-  // -----------------------------------------
-  // PARSE ACTION
-  // -----------------------------------------
-
   const [action, confirmationId] = actionId.split(":");
 
   if (!action || !confirmationId) {
@@ -245,10 +112,6 @@ export async function handleWhatsAppAction({
       message: "Invalid WhatsApp action.",
     };
   }
-
-  // -----------------------------------------
-  // GET PENDING CONFIRMATION
-  // -----------------------------------------
 
   const conversation = await getPendingConfirmation({
     companyId,
@@ -264,10 +127,6 @@ export async function handleWhatsAppAction({
     };
   }
 
-  // -----------------------------------------
-  // CANCEL
-  // -----------------------------------------
-
   if (action === "cancel_order") {
     await clearConversation({
       companyId,
@@ -281,10 +140,6 @@ export async function handleWhatsAppAction({
     };
   }
 
-  // -----------------------------------------
-  // CONFIRM ORDER
-  // -----------------------------------------
-
   if (action === "confirm_order") {
     const command = {
       ...conversation.pendingCommand,
@@ -294,27 +149,14 @@ export async function handleWhatsAppAction({
       customerPhone,
     };
 
-    // -------------------------------------
-    // CREATE ORDER + INVOICE
-    // -------------------------------------
-
     const result = await executeAICommand({
       companyId,
       command,
     });
 
-    // -------------------------------------
-    // CHECK RESULT
-    // -------------------------------------
-
     if (result?.status !== "confirmed") {
       return result;
     }
-
-    // -------------------------------------
-    // SAVE ORDER STATE
-    // -------------------------------------
-
     const orderId = result?.order?._id;
 
     const invoiceId = result?.invoice?._id;
@@ -322,10 +164,6 @@ export async function handleWhatsAppAction({
     if (!orderId) {
       throw new Error("Order ID missing after confirmation");
     }
-
-    // -------------------------------------
-    // MOVE TO ADDRESS STEP
-    // -------------------------------------
 
     await Conversation.findOneAndUpdate(
       {
@@ -360,10 +198,6 @@ export async function handleWhatsAppAction({
       },
     );
 
-    // -------------------------------------
-    // RETURN ADDRESS REQUEST
-    // -------------------------------------
-
     return {
       status: "awaiting_address",
 
@@ -379,10 +213,6 @@ export async function handleWhatsAppAction({
       invoice: result.invoice,
     };
   }
-
-  // -----------------------------------------
-  // INVALID ACTION
-  // -----------------------------------------
 
   return {
     status: "invalid_action",

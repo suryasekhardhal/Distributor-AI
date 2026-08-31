@@ -4,7 +4,10 @@ import { handleWhatsAppAction } from "../services/whatsappAction.service.js";
 
 import { sendWhatsAppMessage } from "../services/whatsappApi.service.js";
 
-import { buildTextMessage,buildPaymentMethodMessage } from "../services/whatsappMessage.service.js";
+import {
+  buildTextMessage,
+  buildPaymentMethodMessage,
+} from "../services/whatsappMessage.service.js";
 
 import { Conversation } from "../models/conversation.model.js";
 import { Order } from "../models/order.model.js";
@@ -48,18 +51,9 @@ export async function receiveWhatsAppMessage(req, res) {
 
     console.dir(body, { depth: null });
 
-    /*
-     * We acknowledge the webhook immediately.
-     * Meta should not wait for our AI/business logic.
-     */
-
     res.status(200).json({
       received: true,
     });
-
-    // -----------------------------------------
-    // Ignore non-message events
-    // -----------------------------------------
 
     const change = body?.entry?.[0]?.changes?.[0];
 
@@ -78,10 +72,6 @@ export async function receiveWhatsAppMessage(req, res) {
     const customerPhone = message.from;
     const customerName = value?.contacts?.[0]?.profile?.name || "";
 
-    // -----------------------------------------
-    // TEXT MESSAGE
-    // -----------------------------------------
-
     if (message.type === "text") {
       const text = message.text?.body;
 
@@ -89,27 +79,12 @@ export async function receiveWhatsAppMessage(req, res) {
         return;
       }
 
-      /*
-       * IMPORTANT:
-       *
-       * companyId will eventually be resolved
-       * from the WhatsApp business number /
-       * connected account.
-       *
-       * For MVP testing we temporarily use
-       * WHATSAPP_COMPANY_ID.
-       */
-
       const companyId = process.env.WHATSAPP_COMPANY_ID;
 
       const conversation = await Conversation.findOne({
         companyId,
         customerPhone,
       });
-
-      // -----------------------------------------
-      // DELIVERY ADDRESS
-      // -----------------------------------------
 
       if (conversation?.state === "awaiting_address") {
         const address = text.trim();
@@ -138,21 +113,21 @@ export async function receiveWhatsAppMessage(req, res) {
           return;
         }
 
-const targetOrder = await Order.findOne({
-    _id: orderId,
-    companyId,
-});
+        const targetOrder = await Order.findOne({
+          _id: orderId,
+          companyId,
+        });
 
-if (!targetOrder) {
-    await sendWhatsAppMessage({
-        to: customerPhone,
-        message: buildTextMessage({
-            text: "I couldn't find your confirmed order.",
-        }),
-    });
+        if (!targetOrder) {
+          await sendWhatsAppMessage({
+            to: customerPhone,
+            message: buildTextMessage({
+              text: "I couldn't find your confirmed order.",
+            }),
+          });
 
-    return;
-};
+          return;
+        }
 
         targetOrder.deliveryAddress = address;
 
@@ -165,9 +140,9 @@ if (!targetOrder) {
         await conversation.save();
 
         await sendWhatsAppMessage({
-    to: customerPhone,
-    message: buildPaymentMethodMessage(),
-});
+          to: customerPhone,
+          message: buildPaymentMethodMessage(),
+        });
 
         return;
       }
@@ -183,10 +158,6 @@ if (!targetOrder) {
 
       console.dir(result, { depth: null });
 
-      // -----------------------------------------
-      // ORDER CONFIRMATION
-      // -----------------------------------------
-
       if (result?.confirmation?.message) {
         await sendWhatsAppMessage({
           to: customerPhone,
@@ -196,10 +167,6 @@ if (!targetOrder) {
 
         return;
       }
-
-      // -----------------------------------------
-      // NORMAL TEXT RESPONSE
-      // -----------------------------------------
 
       const responseText =
         result?.message || "I could not process your request.";
@@ -212,21 +179,11 @@ if (!targetOrder) {
         }),
       });
 
-      /*
-       * NEXT STEP:
-       *
-       * Send `result` back through WhatsApp.
-       *
-       * We will implement the actual Meta
-       * API sender next.
+      /* NEXT STEP:Send `result` back through WhatsApp.We will implement the actual Meta API sender next.
        */
 
       return;
     }
-
-    // -----------------------------------------
-    // BUTTON RESPONSE
-    // -----------------------------------------
 
     if (message.type === "interactive") {
       const actionId = message.interactive?.button_reply?.id;

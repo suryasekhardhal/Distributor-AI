@@ -1,21 +1,14 @@
 import { Router } from "express";
 
 import {
-    verifyWhatsAppWebhook,
-    receiveWhatsAppMessage,
+  verifyWhatsAppWebhook,
+  receiveWhatsAppMessage,
 } from "../controllers/whatsapp.controller.js";
 
-const router =
-    Router();
+const router = Router();
 
-router.get(
-    "/webhook",
-    verifyWhatsAppWebhook
-);
+router.get("/webhook", verifyWhatsAppWebhook);
 
-router.post(
-    "/webhook",
-    receiveWhatsAppMessage
-);
+router.post("/webhook", receiveWhatsAppMessage);
 
 export default router;

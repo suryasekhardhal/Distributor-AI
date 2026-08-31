@@ -27,10 +27,6 @@ async function createOrderTransaction({
   try {
     session.startTransaction();
 
-    // -----------------------------------------
-    // 1. RE-CHECK INVENTORY
-    // -----------------------------------------
-
     for (const item of items) {
       const inventory = await Inventory.findOne({
         companyId,
@@ -49,10 +45,6 @@ async function createOrderTransaction({
         );
       }
     }
-
-    // -----------------------------------------
-    // 2. CREATE ORDER
-    // -----------------------------------------
 
     const [order] = await Order.create(
       [
@@ -78,10 +70,6 @@ async function createOrderTransaction({
       { session },
     );
 
-    // -----------------------------------------
-    // 3. CREATE ORDER ITEMS
-    // -----------------------------------------
-
     const orderItems = items.map((item) => ({
       companyId,
       orderId: order._id,
@@ -102,10 +90,6 @@ async function createOrderTransaction({
     }));
 
     await OrderItem.insertMany(orderItems, { session });
-
-    // -----------------------------------------
-    // 4. RESERVE INVENTORY
-    // -----------------------------------------
 
     for (const item of items) {
       const updatedInventory = await Inventory.findOneAndUpdate(
@@ -137,10 +121,6 @@ async function createOrderTransaction({
         throw new Error(`Inventory reservation failed for ${item.productName}`);
       }
     }
-
-    // -----------------------------------------
-    // 5. CREATE INVOICE
-    // -----------------------------------------
 
     const invoiceTotal = totalAmount;
 
