@@ -8,6 +8,8 @@ import { executeAICommand } from "./aiCommandExecutor.service.js";
 import { Conversation } from "../models/conversation.model.js";
 
 import { Order } from "../models/order.model.js";
+import { Invoice } from "../models/invoice.model.js";
+import { createWhatsAppPayment } from "./whatsappPayment.service.js";
 
 export async function handleWhatsAppAction({
   companyId,
@@ -26,83 +28,136 @@ export async function handleWhatsAppAction({
     throw new Error("actionId is required");
   }
 
-  if (actionId.startsWith("payment:")) {
+if (actionId.startsWith("payment:")) {
     const paymentMethod = actionId.split(":")[1];
 
     if (!["cod", "upi", "online"].includes(paymentMethod)) {
-      return {
-        status: "invalid_payment_method",
-        message: "Invalid payment method.",
-      };
+        return {
+            status: "invalid_payment_method",
+            message: "Invalid payment method.",
+        };
     }
 
     const conversation = await Conversation.findOne({
-      companyId,
-      customerPhone,
-      state: "awaiting_payment",
+        companyId,
+        customerPhone,
+        state: "awaiting_payment",
     });
 
     if (!conversation) {
-      return {
-        status: "payment_session_expired",
-        message:
-          "Your payment session has expired. Please place the order again.",
-      };
+        return {
+            status: "payment_session_expired",
+            message:
+                "Your payment session has expired. Please place the order again.",
+        };
     }
 
     if (!conversation.pendingOrderId) {
-      return {
-        status: "order_not_found",
-        message: "I couldn't find the order associated with this payment.",
-      };
+        return {
+            status: "order_not_found",
+            message:
+                "I couldn't find the order associated with this payment.",
+        };
     }
 
     const order = await Order.findOne({
-      _id: conversation.pendingOrderId,
-      companyId,
+        _id: conversation.pendingOrderId,
+        companyId,
     });
 
     if (!order) {
-      return {
-        status: "order_not_found",
-        message: "Order not found.",
-      };
+        return {
+            status: "order_not_found",
+            message: "Order not found.",
+        };
     }
 
-    order.paymentMethod = paymentMethod;
-    order.status = "confirmed";
+    // -----------------------------------------
+    // COD
+    // -----------------------------------------
 
     if (paymentMethod === "cod") {
-      order.paymentStatus = "pending";
+        order.paymentMethod = "cod";
+        order.status = "confirmed";
+        order.paymentStatus = "pending";
+
+        await order.save();
+
+        conversation.paymentMethod = "cod";
+        conversation.state = "idle";
+        conversation.expiresAt = null;
+
+        await conversation.save();
+
+        return {
+            status: "payment_selected",
+            message:
+                `💳 Payment method: Cash on Delivery\n\n` +
+                `✅ Order ${order.orderNumber} is ready for processing.\n\n` +
+                `💰 Payment will be collected on delivery.`,
+            order,
+        };
     }
 
-    if (paymentMethod === "upi" || paymentMethod === "online") {
-      order.paymentStatus = "pending";
+    // -----------------------------------------
+    // UPI / ONLINE
+    // -----------------------------------------
+
+    const invoiceId = conversation.pendingInvoiceId;
+
+    if (!invoiceId) {
+        return {
+            status: "invoice_not_found",
+            message:
+                "I couldn't find the invoice associated with this order.",
+        };
     }
+
+    const invoice = await Invoice.findOne({
+        _id: invoiceId,
+        companyId,
+    });
+
+    if (!invoice) {
+        return {
+            status: "invoice_not_found",
+            message: "Invoice not found.",
+        };
+    }
+
+    const payment = await createWhatsAppPayment({
+        order,
+        invoice,
+        customerPhone,
+    });
+
+    order.paymentMethod = paymentMethod;
+    order.paymentStatus = "pending";
 
     await order.save();
 
     conversation.paymentMethod = paymentMethod;
-    conversation.state = "idle";
-    conversation.expiresAt = null;
 
     await conversation.save();
 
-    const paymentLabels = {
-      cod: "Cash on Delivery",
-      upi: "UPI",
-      online: "Online Payment",
-    };
+    const paymentLabel =
+        paymentMethod === "upi"
+            ? "UPI"
+            : "Online Payment";
 
     return {
-      status: "payment_selected",
-      message:
-        `💳 Payment method: ${paymentLabels[paymentMethod]}\n\n` +
-        `✅ Order ${order.orderNumber} is ready for processing.`,
-      order,
+        status: "payment_pending",
+        message:
+            `💳 Payment Method: ${paymentLabel}\n\n` +
+            `Order: ${order.orderNumber}\n` +
+            `Amount: ₹${invoice.amountDue}\n\n` +
+            `🔗 Pay securely here:\n${payment.paymentLink}\n\n` +
+            `After successful payment, your invoice will be sent automatically.`,
+        payment,
+        order,
+        invoice,
     };
-  }
-
+}
   const [action, confirmationId] = actionId.split(":");
 
   if (!action || !confirmationId) {
