@@ -77,3 +77,83 @@ export async function sendWhatsAppMessage({ to, message }) {
 
   return data;
 }
+
+export async function uploadWhatsAppDocument({ pdfBuffer }) {
+  if (!pdfBuffer) {
+    throw new Error("PDF buffer is required");
+  }
+
+  if (WHATSAPP_MODE === "simulator") {
+    console.log("📄 WhatsApp document upload simulated");
+
+    return {
+      id: "simulated-media-id",
+    };
+  }
+
+  const url =
+    `https://graph.facebook.com/${WHATSAPP_API_VERSION}/` +
+    `${WHATSAPP_PHONE_NUMBER_ID}/media`;
+
+  const form = new FormData();
+
+  const blob = new Blob([pdfBuffer], {
+    type: "application/pdf",
+  });
+
+  form.append("messaging_product", "whatsapp");
+  form.append("file", blob, "invoice.pdf");
+  form.append("type", "application/pdf");
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+    },
+    body: form,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("WhatsApp media upload error:", data);
+
+    throw new Error(
+      data?.error?.message || "WhatsApp media upload failed"
+    );
+  }
+
+  return data;
+}
+
+export async function sendWhatsAppInvoice({
+  to,
+  pdfBuffer,
+  invoiceNumber,
+}) {
+  if (!to) {
+    throw new Error("WhatsApp recipient is required");
+  }
+
+  if (!pdfBuffer) {
+    throw new Error("PDF buffer is required");
+  }
+
+  const media = await uploadWhatsAppDocument({
+    pdfBuffer,
+  });
+
+  const message = {
+    type: "document",
+    document: {
+      id: media.id,
+      filename: `${invoiceNumber || "invoice"}.pdf`,
+      caption: `📄 Invoice ${invoiceNumber || ""}`,
+    },
+  };
+
+  return sendWhatsAppMessage({
+    to,
+    message,
+  });
+}
