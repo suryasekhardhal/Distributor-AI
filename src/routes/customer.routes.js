@@ -9,11 +9,11 @@ import {
     searchCustomers,
 } from "../controllers/customer.controller.js";
 
-import { verifyJWT } from "../middleware/auth.middleware.js";
+// import { verifyJWT } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
 router.post("/create", createCustomer);
 
